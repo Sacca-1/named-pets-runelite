@@ -17,7 +17,6 @@ import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 import javax.swing.*;
-import java.applet.Applet;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -153,8 +152,8 @@ public class NamedPetsPlugin extends Plugin
 
 					SwingUtilities.invokeLater(() ->
 					{
-						RuneliteColorPicker colorPicker = colorPickerManager.create(SwingUtilities.windowForComponent((Applet) client),
-								existingColor, "Pet Name Color", false);
+						RuneliteColorPicker colorPicker = colorPickerManager.create(client,
+							existingColor, "Pet Name Color", false);
 						colorPicker.setOnClose(color -> saveNameColor(petId, color));
 						colorPicker.setVisible(true);
 					});
