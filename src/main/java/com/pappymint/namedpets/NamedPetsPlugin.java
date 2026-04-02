@@ -3,6 +3,7 @@ package com.pappymint.namedpets;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
@@ -60,12 +61,14 @@ public class NamedPetsPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception {
 		pluginConfigManager = new NamedPetsConfigManager(this, configManager);
+		clearPOHPetRenderList();
 		overlayManager.add(petNameOverlay);
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
+		clearPOHPetRenderList();
 		overlayManager.remove(petNameOverlay);
 	}
 
@@ -96,6 +99,15 @@ public class NamedPetsPlugin extends Plugin
 		// Unsubscribe pet from render list
 		NPC npcDespawned = event.getNpc();
 		removePOHPetFromRenderList(npcDespawned);
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() != GameState.LOGGED_IN)
+		{
+			clearPOHPetRenderList();
+		}
 	}
 
 	private void checkIfMenuOptionsBelongToFollower(MenuEntry[] menuEntries)
@@ -252,5 +264,10 @@ public class NamedPetsPlugin extends Plugin
 	public boolean isPetInPOHRenderList(NPC pet)
 	{
 		return pohPets.contains(pet);
+	}
+
+	void clearPOHPetRenderList()
+	{
+		pohPets.clear();
 	}
 }
