@@ -40,6 +40,13 @@ public interface NamedPetsConfig extends Config
 	default int petNameFontSize() { return 16; }
 
 	@ConfigItem(
+			keyName = "showOverheadPetNames",
+			name = "Show overhead pet names",
+			description = "Show custom names above pets."
+	)
+	default boolean showOverheadPetNames() { return true; }
+
+	@ConfigItem(
 			keyName = "enablePOHPetNames",
 			name = "Name POH pets",
 			description = "View name above pets in your player owned home."

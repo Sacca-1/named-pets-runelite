@@ -35,6 +35,10 @@ public class NamedPetsOverlay extends Overlay
 
     @Override
     public Dimension render(Graphics2D graphics) {
+        if (!pluginConfig.showOverheadPetNames()) {
+            return null;
+        }
+
         NPC follower = client.getFollower();
         if (follower != null) {
             renderPetName(graphics, follower, follower.getId());
