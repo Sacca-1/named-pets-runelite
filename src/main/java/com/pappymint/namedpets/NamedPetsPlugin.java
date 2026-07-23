@@ -1,7 +1,6 @@
 package com.pappymint.namedpets;
 
 import com.google.inject.Provides;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.MenuOpened;
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 
-@Slf4j
 @PluginDescriptor(
 	name = "Named Pets",
 	description = "Right click & give your pets a name!",
