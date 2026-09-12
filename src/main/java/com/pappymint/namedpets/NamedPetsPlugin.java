@@ -6,6 +6,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.PostMenuSort;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -73,7 +74,13 @@ public class NamedPetsPlugin extends Plugin
 	@Subscribe
 	public void onMenuOpened(MenuOpened menuOpened)
 	{
-		checkIfMenuOptionsBelongToFollower(menuOpened.getMenuEntries());
+		addFollowerMenuOptions(menuOpened.getMenuEntries());
+	}
+
+	@Subscribe
+	public void onPostMenuSort(PostMenuSort postMenuSort)
+	{
+		replaceFollowerMenuTargets(client.getMenuEntries());
 	}
 
 	@Subscribe
@@ -108,7 +115,7 @@ public class NamedPetsPlugin extends Plugin
 		}
 	}
 
-	private void checkIfMenuOptionsBelongToFollower(MenuEntry[] menuEntries)
+	private void addFollowerMenuOptions(MenuEntry[] menuEntries)
 	{
 		NPC myFollowerNPC = client.getFollower();
 		if (myFollowerNPC == null) {
@@ -122,25 +129,41 @@ public class NamedPetsPlugin extends Plugin
 
 			if (targetedNpc != null && targetedNpc.getId() == myFollowerNPC.getId()) {
 				// Add menu entry at index below this option - e.g. "Name Overgrown Hellcat"
-				addNamePetMenuOption(targetedNpc, entryIndex, entry, menuEntries);
+				addNamePetMenuOption(targetedNpc, entryIndex, entry);
 				addColorNameMenuOption(targetedNpc, entryIndex, entry);
 				break;
 			}
 		}
 	}
 
-	private void addNamePetMenuOption(NPC pet, int index, MenuEntry menuEntry, MenuEntry[] menuEntries) {
-		if (config.replaceMenuPetName()) {
-			int petId = pet.getId();
-			String petName = getExistingPetName(petId);
-			if (pet.getName() != null) {
-				for (MenuEntry menuEntry1 : menuEntries) {
-					if (menuEntry1.getTarget() != null && menuEntry1.getTarget().contains(pet.getName())) {
-						menuEntry1.setTarget(menuEntry1.getTarget().replace(pet.getName(), petName));
-					}
-				}
+	private void replaceFollowerMenuTargets(MenuEntry[] menuEntries)
+	{
+		if (!config.replaceMenuPetName())
+		{
+			return;
+		}
+
+		NPC follower = client.getFollower();
+		if (follower == null || follower.getName() == null)
+		{
+			return;
+		}
+
+		String npcName = follower.getName();
+		String petName = getExistingPetName(follower.getId());
+		for (MenuEntry menuEntry : menuEntries)
+		{
+			NPC targetedNpc = menuEntry.getNpc();
+			String target = menuEntry.getTarget();
+			if (targetedNpc != null && targetedNpc.getId() == follower.getId()
+				&& target != null && target.contains(npcName))
+			{
+				menuEntry.setTarget(target.replace(npcName, petName));
 			}
 		}
+	}
+
+	private void addNamePetMenuOption(NPC pet, int index, MenuEntry menuEntry) {
 		client.createMenuEntry(index)
 			.setOption("Name")
 			.setTarget(menuEntry.getTarget())
