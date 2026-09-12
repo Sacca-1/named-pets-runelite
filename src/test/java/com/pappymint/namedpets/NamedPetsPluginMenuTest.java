@@ -3,6 +3,7 @@ package com.pappymint.namedpets;
 import net.runelite.api.Client;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
+import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.PostMenuSort;
 import org.junit.Test;
 
@@ -11,9 +12,38 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class NamedPetsPluginMenuTest
 {
+	@Test
+	public void petNameMenuOptionsAreVisibleByDefault()
+	{
+		NamedPetsConfig config = new NamedPetsConfig()
+		{
+		};
+
+		assertTrue(config.showPetNameMenuOptions());
+	}
+
+	@Test
+	public void menuNameOptionsCanBeHidden() throws Exception
+	{
+		NamedPetsPlugin plugin = new NamedPetsPlugin();
+		NamedPetsConfig config = (NamedPetsConfig) Proxy.newProxyInstance(
+			NamedPetsConfig.class.getClassLoader(),
+			new Class[]{NamedPetsConfig.class},
+			(proxy, method, args) -> method.getName().equals("showPetNameMenuOptions")
+				? false
+				: defaultValue(method.getReturnType())
+		);
+		MenuOpened menuOpened = new MenuOpened();
+
+		setField(plugin, "config", config);
+
+		plugin.onMenuOpened(menuOpened);
+	}
+
 	@Test
 	public void postMenuSortReplacesFollowerNameBeforeMenuOpens() throws Exception
 	{
