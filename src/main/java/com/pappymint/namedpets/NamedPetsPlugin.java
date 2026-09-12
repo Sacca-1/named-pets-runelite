@@ -74,6 +74,11 @@ public class NamedPetsPlugin extends Plugin
 	@Subscribe
 	public void onMenuOpened(MenuOpened menuOpened)
 	{
+		if (!config.showPetNameMenuOptions())
+		{
+			return;
+		}
+
 		addFollowerMenuOptions(menuOpened.getMenuEntries());
 	}
 

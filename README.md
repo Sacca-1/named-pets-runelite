@@ -42,6 +42,7 @@ To remove the pets name, rename it and leave the name BLANK.
 * Adjust name position: Move the name position vertically (any number from 0 - 100).
 * Global pet color name: Handy if you want to set all your pets name one color. Any custom set color for a pet will override this.
 * Show overhead pet names: Show or hide custom names above pets. Enabled by default.
+* Show pet name menu options: Show or hide the Name and Color Name right-click options. Enabled by default.
 
 ![image](https://github.com/pappymint/named-pets-runelite/assets/80610660/a3be16fa-a68f-419c-b0a2-1198edadafa3)
 

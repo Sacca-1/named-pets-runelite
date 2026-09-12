@@ -47,6 +47,13 @@ public interface NamedPetsConfig extends Config
 	default boolean showOverheadPetNames() { return true; }
 
 	@ConfigItem(
+		keyName = "showPetNameMenuOptions",
+		name = "Show pet name menu options",
+		description = "Show the Name and Color Name options when right-clicking your follower."
+	)
+	default boolean showPetNameMenuOptions() { return true; }
+
+	@ConfigItem(
 			keyName = "enablePOHPetNames",
 			name = "Name POH pets",
 			description = "View name above pets in your player owned home."
