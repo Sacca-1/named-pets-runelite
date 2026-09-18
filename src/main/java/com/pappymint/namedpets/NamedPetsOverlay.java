@@ -4,6 +4,7 @@ import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.Actor;
 import net.runelite.api.Point;
+import net.runelite.api.gameval.NpcID;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -94,6 +95,12 @@ public class NamedPetsOverlay extends Overlay
         for (NPC pohPet : plugin.getPOHPetRenderList()) {
             // Only use the follower NPC id for naming, retrieving.
 
+            int followerPetId = resolveFollowerPetId(pohPet.getId());
+            if (followerPetId != -1) {
+                renderPetName(graphics, pohPet, followerPetId);
+                continue;
+            }
+
             for (int existingFollowerId : configManager.getAllSavedPetIds()) {
                 if (Objects.equals(pohPet.getName(), configManager.getPetNPCName(existingFollowerId))) {
                     renderPetName(graphics, pohPet, existingFollowerId);
@@ -101,5 +108,17 @@ public class NamedPetsOverlay extends Overlay
                 }
             }
         }
+    }
+
+    /**
+     * Resolve the POH dog variants to their corresponding follower NPC IDs.
+     * The two gameval ranges are contiguous and differ by a fixed offset.
+     */
+    static int resolveFollowerPetId(int pohPetId) {
+        if (pohPetId < NpcID.POH_LABRADOR_YELLOW || pohPetId > NpcID.POH_YORKIE_YELLOW) {
+            return -1;
+        }
+
+        return pohPetId + NpcID.LABRADOR_YELLOW - NpcID.POH_LABRADOR_YELLOW;
     }
 }
