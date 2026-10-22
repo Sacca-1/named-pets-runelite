@@ -49,7 +49,7 @@ public interface NamedPetsConfig extends Config
 	@ConfigItem(
 		keyName = "showPetNameMenuOptions",
 		name = "Show pet name menu options",
-		description = "Show the Name and Color Name options when right-clicking your follower."
+		description = "Show the Name and Color Name options when right-clicking your follower or POH pets."
 	)
 	default boolean showPetNameMenuOptions() { return true; }
 

@@ -2,6 +2,7 @@ package com.pappymint.namedpets;
 
 import net.runelite.api.Client;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.MenuAction;
 import net.runelite.api.NPC;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.api.events.MenuOpened;
@@ -11,7 +12,10 @@ import org.junit.Test;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -170,6 +174,13 @@ public class NamedPetsPluginMenuTest
 	private static NamedPetsPlugin pluginWithMenu(NPC follower, MenuEntry[] entries,
 		Map<Integer, String> savedNames, boolean replaceMenuNames, boolean pohEnabled) throws Exception
 	{
+		return pluginWithMenu(follower, entries, savedNames, replaceMenuNames, pohEnabled, new ArrayList<>());
+	}
+
+	private static NamedPetsPlugin pluginWithMenu(NPC follower, MenuEntry[] entries,
+		Map<Integer, String> savedNames, boolean replaceMenuNames, boolean pohEnabled,
+		List<CreatedMenuEntry> createdEntries) throws Exception
+	{
 		NamedPetsPlugin plugin = new NamedPetsPlugin();
 		Client client = (Client) Proxy.newProxyInstance(Client.class.getClassLoader(),
 			new Class[]{Client.class}, (proxy, method, args) ->
@@ -180,6 +191,10 @@ public class NamedPetsPluginMenuTest
 						return follower;
 					case "getMenuEntries":
 						return entries;
+					case "createMenuEntry":
+						CreatedMenuEntry created = new CreatedMenuEntry();
+						createdEntries.add(created);
+						return created.entry;
 					default:
 						return defaultValue(method.getReturnType());
 				}
@@ -196,11 +211,108 @@ public class NamedPetsPluginMenuTest
 		{
 			@Override
 			public String getSavedPetName(int petId) { return savedNames.get(petId); }
+
+			@Override
+			public String getSavedPetColor(int petId) { return null; }
 		};
 		setField(plugin, "client", client);
 		setField(plugin, "config", config);
 		setField(plugin, "pluginConfigManager", manager);
 		return plugin;
+	}
+
+	@Test
+	public void menuOpenedRenamesPohPetsAndAddsNamingOptionsOncePerPet() throws Exception
+	{
+		int[] pohIds = {NpcID.POH_SKILLPET_THIEVING, NpcID.POH_DOM_PET, NpcID.POH_CALLISTO_PET};
+		String[] originalNames = {"Rocky", "Dom", "Callisto cub"};
+		Map<Integer, String> savedNames = Map.of(NpcID.SKILLPET_THIEVING, "Sir Rocky",
+			NpcID.DOM_PET, "Doom", NpcID.CALLISTOPET, "Bear");
+		String[] customNames = {"Sir Rocky", "Doom", "Bear"};
+		List<CreatedMenuEntry> created = new ArrayList<>();
+		MenuEntry[] entries = new MenuEntry[6];
+		NPC[] pets = new NPC[3];
+		for (int i = 0; i < pets.length; i++)
+		{
+			pets[i] = stubNpc(pohIds[i], originalNames[i]);
+			entries[i * 2] = stubMenuEntry(pets[i], new AtomicReference<>("<col=ffff00>" + originalNames[i]));
+			entries[i * 2 + 1] = stubMenuEntry(pets[i], new AtomicReference<>("<col=ffff00>" + originalNames[i]));
+		}
+		NamedPetsPlugin plugin = pluginWithMenu(null, entries, savedNames, true, true, created);
+		for (NPC pet : pets)
+		{
+			plugin.addNewPOHPetToRenderList(pet);
+		}
+
+		MenuOpened opened = new MenuOpened();
+		opened.setMenuEntries(entries);
+		plugin.onMenuOpened(opened);
+		// Both callbacks can run for the same menu; custom names containing the NPC name must stay intact.
+		plugin.onPostMenuSort(new PostMenuSort());
+
+		assertEquals(6, created.size());
+		for (int i = 0; i < pets.length; i++)
+		{
+			assertEquals("<col=ffff00>" + customNames[i], entries[i * 2].getTarget());
+			assertEquals("<col=ffff00>" + customNames[i], entries[i * 2 + 1].getTarget());
+			assertEquals("Name", created.get(i * 2).option);
+			assertEquals("Color Name", created.get(i * 2 + 1).option);
+			assertEquals("<col=ffff00>" + customNames[i], created.get(i * 2).target);
+			assertEquals(MenuAction.RUNELITE, created.get(i * 2 + 1).type);
+		}
+	}
+
+	@Test
+	public void pohColorRemovalUsesFollowerConfigurationId() throws Exception
+	{
+		NPC pet = stubNpc(NpcID.POH_CALLISTO_PET, "Callisto cub");
+		MenuEntry[] entries = {stubMenuEntry(pet, new AtomicReference<>("<col=ffff00>Callisto cub"))};
+		List<CreatedMenuEntry> created = new ArrayList<>();
+		NamedPetsPlugin plugin = pluginWithMenu(null, entries, Map.of(), true, true, created);
+		AtomicReference<Integer> removedColor = new AtomicReference<>();
+		setField(plugin, "pluginConfigManager", new NamedPetsConfigManager(plugin, null)
+		{
+			@Override
+			public String getSavedPetName(int id) { return id == NpcID.CALLISTOPET ? "Bear" : null; }
+
+			@Override
+			public String getSavedPetColor(int id) { return id == NpcID.CALLISTOPET ? "#ff0000" : null; }
+
+			@Override
+			public void unsetPetColor(int id) { removedColor.set(id); }
+		});
+		plugin.addNewPOHPetToRenderList(pet);
+		MenuOpened opened = new MenuOpened();
+		opened.setMenuEntries(entries);
+
+		plugin.onMenuOpened(opened);
+
+		assertEquals(3, created.size());
+		CreatedMenuEntry remove = created.get(2);
+		assertEquals("Remove Name Color", remove.option);
+		assertEquals(MenuAction.RUNELITE, remove.type);
+		remove.onClick.accept(remove.entry);
+		assertEquals(Integer.valueOf(NpcID.CALLISTOPET), removedColor.get());
+	}
+
+	private static class CreatedMenuEntry
+	{
+		String option;
+		String target;
+		MenuAction type;
+		Consumer<MenuEntry> onClick;
+		final MenuEntry entry = (MenuEntry) Proxy.newProxyInstance(MenuEntry.class.getClassLoader(),
+			new Class[]{MenuEntry.class}, (proxy, method, args) ->
+			{
+				switch (method.getName())
+				{
+					case "setOption": option = (String) args[0]; return proxy;
+					case "setTarget": target = (String) args[0]; return proxy;
+					case "setType": type = (MenuAction) args[0]; return proxy;
+					case "onClick": onClick = (Consumer<MenuEntry>) args[0]; return proxy;
+					default: return defaultValue(method.getReturnType());
+				}
+			});
 	}
 
 	private static NPC stubNpc(int id, String name)

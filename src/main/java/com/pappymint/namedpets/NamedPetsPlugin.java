@@ -16,12 +16,15 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.Text;
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 @PluginDescriptor(
 	name = "Named Pets",
@@ -74,12 +77,14 @@ public class NamedPetsPlugin extends Plugin
 	@Subscribe
 	public void onMenuOpened(MenuOpened menuOpened)
 	{
+		replacePetMenuTargets(menuOpened.getMenuEntries());
+
 		if (!config.showPetNameMenuOptions())
 		{
 			return;
 		}
 
-		addFollowerMenuOptions(menuOpened.getMenuEntries());
+		addPetMenuOptions(menuOpened.getMenuEntries());
 	}
 
 	@Subscribe
@@ -120,23 +125,30 @@ public class NamedPetsPlugin extends Plugin
 		}
 	}
 
-	private void addFollowerMenuOptions(MenuEntry[] menuEntries)
+	private int getMenuPetId(NPC npc)
 	{
-		NPC myFollowerNPC = client.getFollower();
-		if (myFollowerNPC == null) {
-			return;
+		if (npc == null) {
+			return -1;
 		}
+		if (npc == client.getFollower()) {
+			return npc.getId();
+		}
+		if (config.petNamesPOHEnabled() && isPetInPOHRenderList(npc)) {
+			return pluginConfigManager.getPOHFollowerPetId(npc);
+		}
+		return -1;
+	}
 
+	private void addPetMenuOptions(MenuEntry[] menuEntries)
+	{
+		Set<NPC> addedPets = new HashSet<>();
 		for (int entryIndex = 0; entryIndex < menuEntries.length; entryIndex++) {
 			MenuEntry entry = menuEntries[entryIndex];
-
 			NPC targetedNpc = entry.getNpc();
-
-			if (targetedNpc != null && targetedNpc.getId() == myFollowerNPC.getId()) {
-				// Add menu entry at index below this option - e.g. "Name Overgrown Hellcat"
-				addNamePetMenuOption(targetedNpc, entryIndex, entry);
-				addColorNameMenuOption(targetedNpc, entryIndex, entry);
-				break;
+			int petId = getMenuPetId(targetedNpc);
+			if (petId != -1 && addedPets.add(targetedNpc)) {
+				addNamePetMenuOption(targetedNpc, petId, entryIndex, entry);
+				addColorNameMenuOption(petId, entryIndex, entry);
 			}
 		}
 	}
@@ -148,7 +160,6 @@ public class NamedPetsPlugin extends Plugin
 			return;
 		}
 
-		NPC follower = client.getFollower();
 		for (MenuEntry menuEntry : menuEntries)
 		{
 			NPC targetedNpc = menuEntry.getNpc();
@@ -157,20 +168,7 @@ public class NamedPetsPlugin extends Plugin
 				continue;
 			}
 
-			int petId;
-			if (targetedNpc == follower)
-			{
-				petId = follower.getId();
-			}
-			else if (config.petNamesPOHEnabled() && isPetInPOHRenderList(targetedNpc))
-			{
-				petId = pluginConfigManager.getPOHFollowerPetId(targetedNpc);
-			}
-			else
-			{
-				continue;
-			}
-
+			int petId = getMenuPetId(targetedNpc);
 			if (petId == -1)
 			{
 				continue;
@@ -178,29 +176,29 @@ public class NamedPetsPlugin extends Plugin
 			String npcName = targetedNpc.getName();
 			String petName = getExistingPetName(petId);
 			String target = menuEntry.getTarget();
-			if (!petName.isEmpty() && target != null && target.contains(npcName))
+			if (!petName.isEmpty() && target != null && Text.removeTags(target).equals(npcName))
 			{
 				menuEntry.setTarget(target.replace(npcName, petName));
 			}
 		}
 	}
 
-	private void addNamePetMenuOption(NPC pet, int index, MenuEntry menuEntry) {
+	private void addNamePetMenuOption(NPC pet, int petId, int index, MenuEntry menuEntry) {
 		client.createMenuEntry(index)
 			.setOption("Name")
 			.setTarget(menuEntry.getTarget())
 			.setType(MenuAction.RUNELITE)
-			.onClick(e -> onNameMenuEntryOptionClicked(pet));
+			.onClick(e -> onNameMenuEntryOptionClicked(pet, petId));
 	}
 
-	private void addColorNameMenuOption(NPC pet, int index, MenuEntry menuEntry) {
-		int petId = pet.getId();
+	private void addColorNameMenuOption(int petId, int index, MenuEntry menuEntry) {
 		if (!getExistingPetName(petId).isEmpty()) {
 			// Add remove color option if color is set
 
 			client.createMenuEntry(index)
 				.setOption("Color Name")
 				.setTarget(menuEntry.getTarget())
+				.setType(MenuAction.RUNELITE)
 				.onClick(e ->
 				{
 					Color existingColor = getExistingPetNameColor(petId);
@@ -222,6 +220,7 @@ public class NamedPetsPlugin extends Plugin
 				client.createMenuEntry(index + 1)
 						.setOption("Remove Name Color")
 						.setTarget(menuEntry.getTarget())
+						.setType(MenuAction.RUNELITE)
 						.onClick(e ->
 						{
 							pluginConfigManager.unsetPetColor(petId);
@@ -230,8 +229,7 @@ public class NamedPetsPlugin extends Plugin
 		}
 	}
 
-	private void onNameMenuEntryOptionClicked(NPC pet) {
-		int petId = pet.getId();
+	private void onNameMenuEntryOptionClicked(NPC pet, int petId) {
 		String petNPCName = pet.getName();
 		chatboxPanelManager.openTextInput("Name your " + petNPCName)
 			.value(getExistingPetName(petId))

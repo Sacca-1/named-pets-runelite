@@ -23,6 +23,18 @@ public class NamedPetsConfigManagerTest
     }
 
     @Test
+    public void resolvesRockyDomAndCallistoWithoutPreviouslySavedNames()
+    {
+        NamedPetsConfigManager manager = new NamedPetsConfigManager(null, null);
+        assertEquals(NpcID.SKILLPET_THIEVING, manager.getPOHFollowerPetId(stubNpc(NpcID.POH_SKILLPET_THIEVING, "Rocky")));
+        assertEquals(NpcID.SKILLPET_THIEVING_PANDA, manager.getPOHFollowerPetId(stubNpc(NpcID.POH_SKILLPET_THIEVING_PANDA, "Rocky")));
+        assertEquals(NpcID.SKILLPET_THIEVING_TANUKI, manager.getPOHFollowerPetId(stubNpc(NpcID.POH_SKILLPET_THIEVING_TANUKI, "Rocky")));
+        assertEquals(NpcID.DOM_PET, manager.getPOHFollowerPetId(stubNpc(NpcID.POH_DOM_PET, "Dom")));
+        assertEquals(NpcID.CALLISTOPET, manager.getPOHFollowerPetId(stubNpc(NpcID.POH_CALLISTO_PET, "Callisto cub")));
+        assertEquals(NpcID.CALLISTOPET_LEGACY, manager.getPOHFollowerPetId(stubNpc(NpcID.POH_CALLISTO_PET_LEGACY, "Callisto cub")));
+    }
+
+    @Test
     public void doesNotResolveUnknownPohIds()
     {
         assertEquals(-1, NamedPetsConfigManager.resolveFollowerPetId(NpcID.POH_LABRADOR_YELLOW - 1));

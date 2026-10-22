@@ -82,6 +82,20 @@ public class NamedPetsConfigManager {
 
     /** Resolve POH variants before falling back to NPC names shared by multiple pets. */
     static int resolveFollowerPetId(int pohPetId) {
+        switch (pohPetId) {
+            case NpcID.POH_SKILLPET_THIEVING:
+                return NpcID.SKILLPET_THIEVING;
+            case NpcID.POH_SKILLPET_THIEVING_PANDA:
+                return NpcID.SKILLPET_THIEVING_PANDA;
+            case NpcID.POH_SKILLPET_THIEVING_TANUKI:
+                return NpcID.SKILLPET_THIEVING_TANUKI;
+            case NpcID.POH_DOM_PET:
+                return NpcID.DOM_PET;
+            case NpcID.POH_CALLISTO_PET:
+                return NpcID.CALLISTOPET;
+            case NpcID.POH_CALLISTO_PET_LEGACY:
+                return NpcID.CALLISTOPET_LEGACY;
+        }
         if (pohPetId >= NpcID.POH_LABRADOR_YELLOW && pohPetId <= NpcID.POH_YORKIE_YELLOW) {
             return pohPetId + NpcID.LABRADOR_YELLOW - NpcID.POH_LABRADOR_YELLOW;
         }
