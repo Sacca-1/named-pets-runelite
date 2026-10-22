@@ -85,7 +85,7 @@ public class NamedPetsPlugin extends Plugin
 	@Subscribe
 	public void onPostMenuSort(PostMenuSort postMenuSort)
 	{
-		replaceFollowerMenuTargets(client.getMenuEntries());
+		replacePetMenuTargets(client.getMenuEntries());
 	}
 
 	@Subscribe
@@ -141,7 +141,7 @@ public class NamedPetsPlugin extends Plugin
 		}
 	}
 
-	private void replaceFollowerMenuTargets(MenuEntry[] menuEntries)
+	private void replacePetMenuTargets(MenuEntry[] menuEntries)
 	{
 		if (!config.replaceMenuPetName())
 		{
@@ -149,19 +149,36 @@ public class NamedPetsPlugin extends Plugin
 		}
 
 		NPC follower = client.getFollower();
-		if (follower == null || follower.getName() == null)
-		{
-			return;
-		}
-
-		String npcName = follower.getName();
-		String petName = getExistingPetName(follower.getId());
 		for (MenuEntry menuEntry : menuEntries)
 		{
 			NPC targetedNpc = menuEntry.getNpc();
+			if (targetedNpc == null || targetedNpc.getName() == null)
+			{
+				continue;
+			}
+
+			int petId;
+			if (targetedNpc == follower)
+			{
+				petId = follower.getId();
+			}
+			else if (config.petNamesPOHEnabled() && isPetInPOHRenderList(targetedNpc))
+			{
+				petId = pluginConfigManager.getPOHFollowerPetId(targetedNpc);
+			}
+			else
+			{
+				continue;
+			}
+
+			if (petId == -1)
+			{
+				continue;
+			}
+			String npcName = targetedNpc.getName();
+			String petName = getExistingPetName(petId);
 			String target = menuEntry.getTarget();
-			if (targetedNpc != null && targetedNpc.getId() == follower.getId()
-				&& target != null && target.contains(npcName))
+			if (!petName.isEmpty() && target != null && target.contains(npcName))
 			{
 				menuEntry.setTarget(target.replace(npcName, petName));
 			}

@@ -1,11 +1,14 @@
 package com.pappymint.namedpets;
 
 import net.runelite.client.config.ConfigManager;
+import net.runelite.api.NPC;
+import net.runelite.api.gameval.NpcID;
 
 import javax.inject.Inject;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class NamedPetsConfigManager {
     private final ConfigManager configManager;
@@ -58,6 +61,57 @@ public class NamedPetsConfigManager {
     }
     public void setPetNPCName(int petId, String npcName) {
         configManager.setRSProfileConfiguration(CONFIG_GROUP, npcNameConfigKey(petId), npcName);
+    }
+
+    int getPOHFollowerPetId(NPC pohPet) {
+        int followerPetId = resolveFollowerPetId(pohPet.getId());
+        if (followerPetId != -1) {
+            return followerPetId;
+        }
+
+        String npcName = pohPet.getName();
+        if (npcName != null) {
+            for (int savedPetId : getAllSavedPetIds()) {
+                if (Objects.equals(npcName, getPetNPCName(savedPetId))) {
+                    return savedPetId;
+                }
+            }
+        }
+        return -1;
+    }
+
+    /** Resolve POH variants before falling back to NPC names shared by multiple pets. */
+    static int resolveFollowerPetId(int pohPetId) {
+        if (pohPetId >= NpcID.POH_LABRADOR_YELLOW && pohPetId <= NpcID.POH_YORKIE_YELLOW) {
+            return pohPetId + NpcID.LABRADOR_YELLOW - NpcID.POH_LABRADOR_YELLOW;
+        }
+        if (pohPetId >= NpcID.POH_GROWNCAT_DEFAULT && pohPetId <= NpcID.POH_GROWNCAT_HELL) {
+            return pohPetId + NpcID.GROWNCAT - NpcID.POH_GROWNCAT_DEFAULT;
+        }
+        if (pohPetId >= NpcID.POH_OVERGROWNCAT_DEFAULT && pohPetId <= NpcID.POH_OVERGROWNCAT_HELL) {
+            return pohPetId + NpcID.OVERGROWNCAT - NpcID.POH_OVERGROWNCAT_DEFAULT;
+        }
+
+        // Lazy and wily followers put the light variant before the default variant.
+        if (pohPetId == NpcID.POH_LAZYCAT_DEFAULT) {
+            return NpcID.LAZYCAT;
+        }
+        if (pohPetId == NpcID.POH_LAZYCAT_LIGHT) {
+            return NpcID.LAZYCAT_LIGHT;
+        }
+        if (pohPetId >= NpcID.POH_LAZYCAT_BROWN && pohPetId <= NpcID.POH_LAZYCAT_HELL) {
+            return pohPetId + NpcID.LAZYCAT_BROWN - NpcID.POH_LAZYCAT_BROWN;
+        }
+        if (pohPetId == NpcID.POH_WILEYCAT_DEFAULT) {
+            return NpcID.WILEYCAT;
+        }
+        if (pohPetId == NpcID.POH_WILEYCAT_LIGHT) {
+            return NpcID.WILEYCAT_LIGHT;
+        }
+        if (pohPetId >= NpcID.POH_WILEYCAT_BROWN && pohPetId <= NpcID.POH_WILEYCAT_HELL) {
+            return pohPetId + NpcID.WILEYCAT_BROWN - NpcID.POH_WILEYCAT_BROWN;
+        }
+        return -1;
     }
 
     public List<Integer> getAllSavedPetIds() {
